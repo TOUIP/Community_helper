@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>物业知识助手</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #f5f7fb;
+      color: #1f2937;
+    }
+    .container {
+      max-width: 920px;
+      margin: 32px auto;
+      padding: 0 16px;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      overflow: hidden;
+    }
+    .header {
+      padding: 20px 24px;
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      color: white;
+    }
+    .header h1 {
+      margin: 0 0 6px;
+      font-size: 24px;
+    }
+    .header p {
+      margin: 0;
+      opacity: 0.92;
+      font-size: 14px;
+    }
+    .chat {
+      min-height: 420px;
+      max-height: 520px;
+      overflow-y: auto;
+      padding: 20px;
+      background: #f8fafc;
+    }
+    .message {
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+    }
+    .message.user { align-items: flex-end; }
+    .message.assistant { align-items: flex-start; }
+    .bubble {
+      max-width: 82%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .user .bubble {
+      background: #2563eb;
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .assistant .bubble {
+      background: white;
+      color: #111827;
+      border: 1px solid #e5e7eb;
+      border-bottom-left-radius: 4px;
+    }
+    .meta {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 6px;
+    }
+    .panel {
+      margin-top: 10px;
+      padding: 12px;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      max-width: 82%;
+    }
+    .panel h3 {
+      margin: 0 0 8px;
+      font-size: 14px;
+    }
+    .tag {
+      display: inline-block;
+      padding: 4px 8px;
+      margin: 0 6px 6px 0;
+      font-size: 12px;
+      color: #1d4ed8;
+      background: #dbeafe;
+      border-radius: 999px;
+    }
+    .input-area {
+      padding: 16px;
+      border-top: 1px solid #e5e7eb;
+      background: white;
+    }
+    .row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    textarea {
+      flex: 1;
+      min-height: 84px;
+      resize: vertical;
+      border: 1px solid #d1d5db;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 15px;
+      outline: none;
+    }
+    textarea:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    button {
+      border: none;
+      background: #2563eb;
+      color: white;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .hint {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+    .error {
+      color: #b91c1c;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <h1>物业知识助手</h1>
+        <p>输入业主问题，系统会返回回答、命中的经验贴和引用来源。</p>
+      </div>
+
+      <div id="chat" class="chat">
+        <div class="message assistant">
+          <div class="bubble">你好，直接输入问题即可，例如：门禁怎么录人脸、周围有洗衣服的吗、物业费怎么交。</div>
+        </div>
+      </div>
+
+      <div class="input-area">
+        <div class="row">
+          <textarea id="questionInput" placeholder="请输入你的问题..."></textarea>
+          <button id="sendBtn">发送</button>
+        </div>
+        <div class="hint">后端接口地址默认是 http://127.0.0.1:8000/ask</div>
+        <div id="errorBox"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chat = document.getElementById('chat');
+    const questionInput = document.getElementById('questionInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const errorBox = document.getElementById('errorBox');
+    const API_URL = '/ask';
+
+    function appendMessage(role, text) {
+      const wrapper = document.createElement('div');
+      wrapper.className = `message ${role}`;
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.textContent = text;
+
+      wrapper.appendChild(bubble);
+      chat.appendChild(wrapper);
+      chat.scrollTop = chat.scrollHeight;
+      return wrapper;
+    }
+
+    function appendAssistantPanels(data) {
+      if (Array.isArray(data.hits) && data.hits.length > 0) {
+        const hitsPanel = document.createElement('div');
+        hitsPanel.className = 'panel';
+        hitsPanel.innerHTML = `<h3>命中的经验贴</h3>`;
+
+        data.hits.forEach(item => {
+          const itemBox = document.createElement('div');
+          itemBox.style.marginBottom = '10px';
+          itemBox.innerHTML = `<strong>${item.title}</strong>`;
+
+          if (Array.isArray(item.tags)) {
+            const tagWrap = document.createElement('div');
+            tagWrap.style.marginTop = '6px';
+            item.tags.forEach(tag => {
+              const tagEl = document.createElement('span');
+              tagEl.className = 'tag';
+              tagEl.textContent = tag;
+              tagWrap.appendChild(tagEl);
+            });
+            itemBox.appendChild(tagWrap);
+          }
+
+          hitsPanel.appendChild(itemBox);
+        });
+
+        chat.appendChild(hitsPanel);
+      }
+
+      if (Array.isArray(data.citations) && data.citations.length > 0) {
+        const citePanel = document.createElement('div');
+        citePanel.className = 'panel';
+        citePanel.innerHTML = `<h3>引用来源</h3>`;
+
+        data.citations.forEach(item => {
+          const line = document.createElement('div');
+          line.style.marginBottom = '8px';
+          line.textContent = `${item.id} · ${item.title}`;
+          citePanel.appendChild(line);
+        });
+
+        chat.appendChild(citePanel);
+      }
+
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function sendQuestion() {
+      const question = questionInput.value.trim();
+      if (!question) return;
+
+      errorBox.innerHTML = '';
+      appendMessage('user', question);
+      questionInput.value = '';
+      sendBtn.disabled = true;
+
+      const loadingMsg = appendMessage('assistant', '正在处理中，请稍候...');
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ question })
+        });
+
+        if (!res.ok) {
+          throw new Error(`请求失败，状态码：${res.status}`);
+        }
+
+        const data = await res.json();
+        loadingMsg.remove();
+
+        appendMessage('assistant', data.answer || '已收到，但未返回 answer。');
+        appendAssistantPanels(data);
+      } catch (error) {
+        loadingMsg.remove();
+        const err = document.createElement('div');
+        err.className = 'error';
+        err.textContent = `出错了：${error.message}`;
+        errorBox.innerHTML = '';
+        errorBox.appendChild(err);
+      } finally {
+        sendBtn.disabled = false;
+        questionInput.focus();
+      }
+    }
+
+    sendBtn.addEventListener('click', sendQuestion);
+
+    questionInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendQuestion();
+      }
+    });
+  </script>
+</body>
+</html>
