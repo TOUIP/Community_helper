@@ -33,21 +33,18 @@
 
     html {
       height: 100%;
-      scroll-behavior: smooth;
+      overflow: hidden;
     }
 
     body {
       margin: 0;
-      min-height: 100%;
+      height: 100%;
+      overflow: hidden;
       font-family: var(--font);
       color: var(--text);
       background:
         radial-gradient(circle at top, rgba(96, 165, 250, 0.18), transparent 32%),
         linear-gradient(180deg, var(--bg-accent), var(--bg));
-    }
-
-    body.locked {
-      overflow: hidden;
     }
 
     button,
@@ -59,7 +56,8 @@
       position: relative;
       display: flex;
       flex-direction: column;
-      min-height: 100dvh;
+      height: 100dvh;
+      overflow: hidden;
     }
 
     .app::before {
@@ -144,17 +142,43 @@
     .main {
       flex: 1;
       width: 100%;
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .main::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 65% 8%, rgba(255, 255, 255, 0.58), transparent 28%),
+        radial-gradient(circle at 50% 100%, rgba(147, 197, 253, 0.22), transparent 34%);
+    }
+
+    .scroll-region {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+      scrollbar-gutter: stable both-edges;
     }
 
     .chat-shell {
       max-width: 960px;
       margin: 0 auto;
+      min-height: 100%;
       padding: 18px 20px calc(var(--composer-h) + var(--safe-bottom) + 32px);
+      position: relative;
     }
 
     .chat-shell.is-empty {
       /* 首屏欢迎态保持单屏展示，不让引导页本身产生滚动。 */
-      min-height: calc(100svh - 78px);
+      min-height: 100%;
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
@@ -167,7 +191,7 @@
       display: flex;
       flex-direction: column;
       gap: 20px;
-      min-height: calc(100dvh - var(--composer-h) - 110px);
+      min-height: 100%;
     }
 
     .empty-state {
@@ -186,6 +210,20 @@
       width: min(100%, 640px);
       padding: 0;
       text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .empty-card::before {
+      content: "";
+      position: absolute;
+      inset: -44px -72px;
+      border-radius: 40px;
+      background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.72), transparent 44%),
+        radial-gradient(circle at 50% 100%, rgba(191, 219, 254, 0.38), transparent 58%);
+      filter: blur(18px);
+      z-index: -1;
     }
 
     .empty-emoji {
@@ -484,14 +522,12 @@
       }
 
       .chat-shell.is-empty {
-        min-height: calc(100svh - 66px);
         padding-top: 128px;
         padding-bottom: calc(var(--composer-h) + var(--safe-bottom) + 12px);
       }
 
       .chat {
         gap: 16px;
-        min-height: calc(100dvh - var(--composer-h) - 86px);
       }
 
       .message-body {
@@ -504,6 +540,11 @@
 
       .empty-card {
         width: min(100%, 560px);
+      }
+
+      .empty-card::before {
+        inset: -28px -22px;
+        border-radius: 28px;
       }
 
       .empty-emoji {
@@ -551,20 +592,22 @@
     </header>
 
     <main class="main">
-      <div id="chatShell" class="chat-shell">
-        <section id="emptyState" class="empty-state" aria-label="欢迎页">
-          <div class="empty-card">
-            <div class="empty-emoji" aria-hidden="true">👋</div>
-            <h2>你好，我是社区助手</h2>
-            <p>我可以帮你查询物业服务、社区配套和常见办事问题。直接输入你的问题，或者从下面挑一个开始。</p>
-            <div class="starter-list">
-              <button class="starter-chip" type="button" data-question="门禁怎么录入人脸？">门禁怎么录入人脸？</button>
-              <button class="starter-chip" type="button" data-question="物业费怎么缴纳？">物业费怎么缴纳？</button>
-              <button class="starter-chip" type="button" data-question="附近有洗衣服务吗？">附近有洗衣服务吗？</button>
+      <div id="scrollRegion" class="scroll-region">
+        <div id="chatShell" class="chat-shell">
+          <section id="emptyState" class="empty-state" aria-label="欢迎页">
+            <div class="empty-card">
+              <div class="empty-emoji" aria-hidden="true">👋</div>
+              <h2>你好，我是社区助手</h2>
+              <p>我可以帮你查询物业服务、社区配套和常见办事问题。直接输入你的问题，或者从下面挑一个开始。</p>
+              <div class="starter-list">
+                <button class="starter-chip" type="button" data-question="门禁怎么录入人脸？">门禁怎么录入人脸？</button>
+                <button class="starter-chip" type="button" data-question="物业费怎么缴纳？">物业费怎么缴纳？</button>
+                <button class="starter-chip" type="button" data-question="附近有洗衣服务吗？">附近有洗衣服务吗？</button>
+              </div>
             </div>
-          </div>
-        </section>
-        <section id="chat" class="chat" aria-live="polite" aria-label="聊天记录"></section>
+          </section>
+          <section id="chat" class="chat" aria-live="polite" aria-label="聊天记录"></section>
+        </div>
       </div>
     </main>
 
@@ -588,6 +631,7 @@
     const API_URL = '/ask';
 
     const chat = document.getElementById('chat');
+    const scrollRegion = document.getElementById('scrollRegion');
     const chatShell = document.getElementById('chatShell');
     const emptyState = document.getElementById('emptyState');
     const questionInput = document.getElementById('questionInput');
@@ -613,7 +657,6 @@
       const hasMessages = chat.children.length > 0;
       emptyState.classList.toggle('hidden', hasMessages);
       chatShell.classList.toggle('is-empty', !hasMessages);
-      document.body.classList.toggle('locked', !hasMessages);
     }
 
     function resizeTextarea() {
@@ -624,8 +667,8 @@
 
     function scrollToBottom(behavior = 'smooth') {
       requestAnimationFrame(() => {
-        window.scrollTo({
-          top: document.documentElement.scrollHeight,
+        scrollRegion.scrollTo({
+          top: scrollRegion.scrollHeight,
           behavior
         });
       });
