@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Community Helper index refresh periodically
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=30min
+AccuracySec=1min
+Persistent=true
+Unit=community_helper_index_refresh.service
+
+[Install]
+WantedBy=timers.target

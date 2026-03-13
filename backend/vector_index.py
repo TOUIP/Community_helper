@@ -53,10 +53,12 @@ def build_index():
             "embedding": embedding
         })
 
-    INDEX_PATH.write_text(
+    temp_path = INDEX_PATH.with_suffix(".json.tmp")
+    temp_path.write_text(
         json.dumps(records, ensure_ascii=False, indent=2),
         encoding="utf-8"
     )
+    temp_path.replace(INDEX_PATH)
 
     print(f"向量索引已生成：{INDEX_PATH}")
     print(f"共写入 {len(records)} 条记录")
