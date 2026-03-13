@@ -1,16 +1,42 @@
 import json
 from pathlib import Path
+
+from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
+
 from backend.retriever import load_kb
+from backend.supabase_kb import load_kb_from_supabase
+
+load_dotenv()
 
 MODEL_NAME = "BAAI/bge-small-zh-v1.5"
-INDEX_PATH = Path(__file__).parent / "vector_index.json"
+INDEX_PATH = Path(__file__).parent.parent / "vector_index.json"
 
 model = SentenceTransformer(MODEL_NAME)
 
 
-def build_index():
+def get_knowledge_items():
+    """
+    阶段一默认优先使用 Supabase 数据源。
+    如果 Supabase 当前不可用，则回退到本地 kb，避免索引构建完全中断。
+    """
+    try:
+        kb = load_kb_from_supabase()
+        if kb:
+            print(f"已从 Supabase 加载 {len(kb)} 条知识")
+            return kb
+
+        print("Supabase 未返回可用知识，回退到本地 kb")
+    except Exception as exc:
+        print(f"从 Supabase 加载知识失败，回退到本地 kb。原因: {exc}")
+
     kb = load_kb()
+    print(f"已从本地 kb 加载 {len(kb)} 条知识")
+    return kb
+
+
+def build_index():
+    kb = get_knowledge_items()
 
     records = []
     for item in kb:
