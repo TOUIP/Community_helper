@@ -17,6 +17,7 @@ rewriter_logger = get_logger("community_helper.rewriter", "rewriter.log")
 
 
 def format_context_for_rewrite(context: List[ContextItem]) -> str:
+    # 统一把最近上下文整理成稳定文本块，给 LLM 做 Query Rewrite。
     lines = []
     for item in get_recent_context_items(context, limit=6):
         role = item.role
@@ -34,11 +35,12 @@ def should_try_llm_rewrite(question: str, context: List[ContextItem]) -> bool:
     text = "".join(question.strip().split())
     if not text:
         return False
-    # 明确优先处理短追问、代词追问、补全类追问。
+    # 这里只在“像追问”的场景下才额外调用模型，控制成本和延迟。
     return len(text) <= 12 or any(token in text for token in ("哪", "怎么", "多少", "电话", "地址", "它", "这个", "那个"))
 
 
 def rewrite_question_with_context(question: str, context: List[ContextItem]) -> str:
+    # 先生成规则版 fallback，确保就算 LLM 不可用也不会失去多轮能力。
     rule_based = build_retrieval_question(question, context)
 
     if not should_try_llm_rewrite(question, context) or not API_KEY:
@@ -48,6 +50,7 @@ def rewrite_question_with_context(question: str, context: List[ContextItem]) -> 
     if not context_text:
         return rule_based
 
+    # 这个模型只负责“把追问改成适合检索的独立问题”，不负责回答。
     system_prompt = (
         "你是一个检索前的问题改写助手。\n"
         "你的任务是：结合最近上下文，把用户当前追问改写成一个适合知识检索的、完整明确的中文问题。\n"

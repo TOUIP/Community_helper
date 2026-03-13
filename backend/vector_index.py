@@ -53,6 +53,7 @@ def build_index():
             "embedding": embedding
         })
 
+    # 先写临时文件再 replace，避免在线请求碰到半写入状态的索引文件。
     temp_path = INDEX_PATH.with_suffix(".json.tmp")
     temp_path.write_text(
         json.dumps(records, ensure_ascii=False, indent=2),

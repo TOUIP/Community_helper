@@ -6,6 +6,7 @@ PROJECT_DIR="${PROJECT_DIR:-/var/www/Community_helper}"
 VENV_DIR="${VENV_DIR:-$PROJECT_DIR/.venv}"
 PYTHON_BIN="${PYTHON_BIN:-$VENV_DIR/bin/python}"
 
+# systemd timer 只负责调用这个稳定入口脚本，方便后续统一调整运行参数。
 cd "$PROJECT_DIR"
 
 if [[ ! -x "$PYTHON_BIN" ]]; then

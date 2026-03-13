@@ -10,6 +10,7 @@ _configured_loggers: dict[str, logging.Logger] = {}
 
 
 def resolve_log_dir() -> Path:
+    # 线上优先走标准日志目录；本地开发或无权限环境自动回退到项目内 logs/。
     configured = os.getenv("APP_LOG_DIR", "").strip()
     candidates = [Path(configured)] if configured else [STANDARD_LOG_DIR, FALLBACK_LOG_DIR]
 
@@ -55,6 +56,7 @@ def get_logger(name: str, filename: str) -> logging.Logger:
 
 
 def get_runs_log_path() -> Path:
+    # runs.jsonl 与普通应用日志共用同一个解析后的日志目录。
     log_dir = resolve_log_dir()
     log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir / "runs.jsonl"

@@ -36,7 +36,8 @@ def health():
 
 @app.post("/ask", response_model=AskResponse)
 def ask(req: AskRequest):
-    # 检索和生成保持解耦：retrieve 只负责找证据，generate_answer 只负责组织回答。
+    # 请求入口统一在这里做“问题标准化”：
+    # 原始问题保留给接口返回，检索和生成都使用更完整的 retrieval_question。
     retrieval_question = rewrite_question_with_context(req.question, req.context)
     if retrieval_question != req.question:
         app_logger.info(
@@ -49,7 +50,7 @@ def ask(req: AskRequest):
         app_logger.info("question=%r context_items=%s", req.question, len(req.context))
 
     hits = retrieve(retrieval_question, top_k=3)
-    # 生成层也使用“改写后的完整问题”，这样回答不会再围着“在哪里/多少钱”这类模糊追问打转。
+    # 生成层也使用改写后的问题，避免证据命中了，但回答仍围着模糊追问打转。
     generated = generate_answer(retrieval_question, hits)
 
     result = AskResponse(
@@ -64,6 +65,7 @@ def ask(req: AskRequest):
         log_payload["retrieval_question"] = retrieval_question
         log_payload["context"] = [item.model_dump() for item in req.context]
 
+    # runs.jsonl 保留完整问答流水，便于后续回放问题和离线分析。
     with RUNS_PATH.open("a", encoding="utf-8") as f:
         f.write(json.dumps(log_payload, ensure_ascii=False) + "\n")
 

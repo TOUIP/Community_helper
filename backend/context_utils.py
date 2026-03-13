@@ -36,6 +36,7 @@ def compact_text(text: str, limit: int = 80) -> str:
 
 
 def get_recent_context_items(context: Iterable[ContextItem], limit: int = 6) -> List[ContextItem]:
+    # 这里只保留最近窗口，避免上下文无限增长影响改写质量。
     items = [item for item in context if item.content.strip()]
     return items[-limit:]
 
@@ -45,6 +46,7 @@ def is_follow_up_question(question: str) -> bool:
     if not text:
         return False
 
+    # 当前规则仍然偏启发式：短问题更像追问，但会和 marker 共同作用。
     if len(text) <= 8:
         return True
 
@@ -59,6 +61,7 @@ def find_last_user_topic(context_items: List[ContextItem]) -> str:
 
 
 def format_non_chat_context(context_items: List[ContextItem]) -> str:
+    # 预留给未来多信息源上下文，例如画像、摘要、外部事实卡片等。
     parts = []
     for item in context_items:
         if item.source == "chat":
@@ -69,6 +72,10 @@ def format_non_chat_context(context_items: List[ContextItem]) -> str:
 
 
 def build_retrieval_question(question: str, context: List[ContextItem]) -> str:
+    # 规则式改写是基础 fallback：
+    # 1. 没上下文时原样返回
+    # 2. 不是追问时最多补少量非聊天上下文
+    # 3. 是追问时尽量还原成独立可检索问题
     recent_items = get_recent_context_items(context)
     if not recent_items:
         return question
@@ -91,6 +98,7 @@ def build_retrieval_question(question: str, context: List[ContextItem]) -> str:
 
 
 def build_standalone_question(topic: str, follow_up: str) -> str:
+    # 这里不追求“语言最自然”，而追求“足够稳定、适合检索”。
     topic = compact_text(topic, 40).rstrip("，。！？、 ")
     follow_up = "".join(follow_up.strip().split())
     if not topic or not follow_up:
