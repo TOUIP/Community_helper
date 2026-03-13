@@ -639,6 +639,8 @@
     const statusText = document.getElementById('statusText');
 
     let isSending = false;
+    const conversationContext = [];
+    const CONTEXT_WINDOW_SIZE = 6;
 
     function formatTime(date = new Date()) {
       return new Intl.DateTimeFormat('zh-CN', {
@@ -663,6 +665,17 @@
       questionInput.style.height = 'auto';
       const nextHeight = Math.min(questionInput.scrollHeight, 180);
       questionInput.style.height = nextHeight + 'px';
+    }
+
+    function pushContextItem(role, content, source = 'chat', kind = 'message', metadata = {}) {
+      conversationContext.push({ role, content, source, kind, metadata });
+      if (conversationContext.length > 20) {
+        conversationContext.splice(0, conversationContext.length - 20);
+      }
+    }
+
+    function getContextWindow() {
+      return conversationContext.slice(-CONTEXT_WINDOW_SIZE);
     }
 
     function scrollToBottom(behavior = 'smooth') {
@@ -732,6 +745,8 @@
       setStatus('');
       // 用户消息先上屏，再发请求，避免交互显得“卡一下才有反应”。
       createMessage('user', question);
+      const requestContext = getContextWindow();
+      pushContextItem('user', question);
       questionInput.value = '';
       resizeTextarea();
       setSendingState(true);
@@ -744,7 +759,10 @@
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ question })
+          body: JSON.stringify({
+            question,
+            context: requestContext
+          })
         });
 
         if (!response.ok) {
@@ -756,10 +774,12 @@
 
         // 前端只展示 answer；即使后端返回 hits/citations，也不在当前 UI 渲染。
         createMessage('assistant', data.answer || '已收到消息，但暂时没有可显示的回复。');
+        pushContextItem('assistant', data.answer || '已收到消息，但暂时没有可显示的回复。');
         setStatus('');
       } catch (error) {
         loading.message.remove();
         createMessage('assistant', '这次回复出了点问题，请稍后再试。');
+        pushContextItem('assistant', '这次回复出了点问题，请稍后再试。', 'chat', 'error');
         setStatus(error.message || '请求失败，请稍后重试。', true);
       } finally {
         setSendingState(false);

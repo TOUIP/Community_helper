@@ -5,6 +5,7 @@ from typing import Iterable, List
 
 from sentence_transformers import SentenceTransformer
 
+from backend.logging_utils import get_logger
 from backend.schemas import KnowledgeItem
 
 KB_DIR = Path(__file__).parent / "kb"
@@ -15,6 +16,8 @@ LEXICAL_WEIGHT = 0.28
 
 # 在线检索与离线建索引共用同一个 embedding 模型，保证向量空间一致。
 model = SentenceTransformer(MODEL_NAME)
+_retrieval_mode_logged = False
+retrieval_logger = get_logger("community_helper.retriever", "retriever.log")
 
 
 def load_kb() -> List[KnowledgeItem]:
@@ -140,10 +143,21 @@ def build_item_from_record(record: dict) -> KnowledgeItem:
     )
 
 
+def log_retrieval_mode(mode: str, extra: str = "") -> None:
+    global _retrieval_mode_logged
+    if _retrieval_mode_logged:
+        return
+
+    suffix = f" {extra}" if extra else ""
+    retrieval_logger.info("mode=%s%s", mode, suffix)
+    _retrieval_mode_logged = True
+
+
 def retrieve(question: str, top_k: int = 3) -> List[KnowledgeItem]:
     vector_index = load_vector_index()
 
     if vector_index:
+        log_retrieval_mode("vector_index", f"path={INDEX_PATH} count={len(vector_index)}")
         # 只要索引文件存在，就走“向量 + 关键词”的混合召回。
         query_embedding = model.encode(question).tolist()
         scored = []
@@ -159,6 +173,7 @@ def retrieve(question: str, top_k: int = 3) -> List[KnowledgeItem]:
         return [item for score, _, _, item in scored if score > 0.18][:top_k]
 
     # 这个分支是历史 fallback：在没有 vector_index.json 时，仍然能退回本地字符匹配。
+    log_retrieval_mode("fallback_kb", f"path={KB_DIR}")
     kb = load_kb()
 
     scored = []
