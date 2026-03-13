@@ -12,6 +12,7 @@ load_dotenv()
 MODEL_NAME = "BAAI/bge-small-zh-v1.5"
 INDEX_PATH = Path(__file__).parent.parent / "vector_index.json"
 
+# 这个模型用于“离线建索引”，必须和在线 retriever 使用的模型一致。
 model = SentenceTransformer(MODEL_NAME)
 
 
@@ -40,6 +41,7 @@ def build_index():
 
     records = []
     for item in kb:
+        # 阶段一仍然是一篇 post 对应一个向量，不做 chunking。
         text = f"{item.title} {item.content} {' '.join(item.tags)}"
         embedding = model.encode(text).tolist()
 

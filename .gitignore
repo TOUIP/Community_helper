@@ -4,3 +4,5 @@ __pycache__/
 logs/
 *.jsonl
 vector_index.json
+INTERNAL_PROJECT_NOTES.md
+ONBOARDING_GUIDE.md

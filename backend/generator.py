@@ -15,6 +15,7 @@ MODEL_NAME = os.getenv("QWEN_MODEL", "qwen-plus")
 
 
 def build_evidence_text(hits: List[KnowledgeItem]) -> str:
+    # 这里把命中的 KnowledgeItem 展开成统一证据文本，供大模型一次性阅读。
     blocks = []
 
     for item in hits:
@@ -46,6 +47,7 @@ def generate_answer(question: str, hits: List[KnowledgeItem]):
 
     evidence_text = build_evidence_text(hits)
 
+    # 当前 prompt 设计强调“只能基于证据回答”，避免模型凭空补充物业规则。
     system_prompt = (
         "你是一个物业客服知识助手。\n"
         "你的任务是：基于给定的经验贴证据，回答业主问题。\n"
@@ -86,6 +88,7 @@ def generate_answer(question: str, hits: List[KnowledgeItem]):
     except Exception as e:
         answer_text = f"模型调用异常，已返回规则回答。异常信息: {str(e)}"
 
+    # citations 仍然保留给接口和日志使用，哪怕当前前端不展示。
     citations = [Citation(id=item.id, title=item.title) for item in hits]
 
     # 兜底：如果模型没返回有效文本，就回退到规则答案

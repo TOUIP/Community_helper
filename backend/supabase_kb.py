@@ -86,6 +86,10 @@ def fetch_posts_from_supabase() -> List[Dict[str, Any]]:
     start = 0
 
     while True:
+        # 这里只做阶段一需要的最小筛选：
+        # 1. publish_status 必须匹配
+        # 2. verified_status 过滤是可选的
+        # 3. title 为空的记录不进入知识库
         response = (
             client.table(SUPABASE_TABLE)
             .select(
@@ -125,6 +129,7 @@ def map_post_to_knowledge_item(post: Dict[str, Any]) -> Optional[KnowledgeItem]:
     if not title:
         return None
 
+    # 本阶段只做字段映射，不额外拼接 images，也不做摘要改写。
     content = str(post.get("description") or "").strip()
     tags = _normalize_tags(post.get("tags"))
 

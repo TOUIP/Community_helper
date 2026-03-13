@@ -17,6 +17,7 @@ FRONTEND_DIR = BASE_DIR / "frontend"
 LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 
+# 每次 /ask 的输入输出都会追加写入这个 jsonl，便于线上排查召回和生成结果。
 RUNS_PATH = LOG_DIR / "runs.jsonl"
 
 app = FastAPI()
@@ -37,6 +38,7 @@ def health():
 
 @app.post("/ask", response_model=AskResponse)
 def ask(req: AskRequest):
+    # 检索和生成保持解耦：retrieve 只负责找证据，generate_answer 只负责组织回答。
     hits = retrieve(req.question, top_k=3)
     generated = generate_answer(req.question, hits)
 
@@ -53,4 +55,5 @@ def ask(req: AskRequest):
     return result
 
 
+# 根路径直接挂载 frontend 目录，因此部署时不需要额外的静态文件服务。
 app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")
