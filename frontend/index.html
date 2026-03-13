@@ -300,7 +300,6 @@
       padding: 14px 16px;
       border-radius: var(--radius-md);
       line-height: 1.7;
-      white-space: pre-wrap;
       word-break: break-word;
       box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
     }
@@ -323,6 +322,149 @@
       align-items: center;
       gap: 10px;
       color: #38527f;
+    }
+
+    .bubble-content > :first-child {
+      margin-top: 0;
+    }
+
+    .bubble-content > :last-child {
+      margin-bottom: 0;
+    }
+
+    .bubble-content p {
+      margin: 0 0 12px;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .bubble-content h1,
+    .bubble-content h2,
+    .bubble-content h3,
+    .bubble-content h4 {
+      margin: 0 0 12px;
+      line-height: 1.35;
+      letter-spacing: -0.02em;
+    }
+
+    .bubble-content h1 {
+      font-size: 1.3em;
+    }
+
+    .bubble-content h2 {
+      font-size: 1.18em;
+    }
+
+    .bubble-content h3,
+    .bubble-content h4 {
+      font-size: 1.05em;
+    }
+
+    .bubble-content ul,
+    .bubble-content ol {
+      margin: 0 0 12px;
+      padding-left: 1.4em;
+    }
+
+    .bubble-content li + li {
+      margin-top: 6px;
+    }
+
+    .bubble-content blockquote {
+      margin: 0 0 12px;
+      padding: 10px 14px;
+      border-left: 3px solid rgba(37, 99, 235, 0.24);
+      background: rgba(255, 255, 255, 0.54);
+      border-radius: 0 12px 12px 0;
+      color: #324766;
+    }
+
+    .bubble-content pre {
+      margin: 0 0 12px;
+      padding: 14px;
+      overflow-x: auto;
+      border-radius: 14px;
+      background: #edf4ff;
+      border: 1px solid rgba(37, 99, 235, 0.1);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.92em;
+      line-height: 1.6;
+    }
+
+    .bubble-content pre code {
+      padding: 0;
+      background: transparent;
+      border-radius: 0;
+      font-size: inherit;
+    }
+
+    .bubble-content strong {
+      font-weight: 700;
+    }
+
+    .bubble-content em {
+      font-style: italic;
+    }
+
+    .bubble-content code {
+      padding: 1px 6px;
+      border-radius: 6px;
+      background: rgba(37, 99, 235, 0.08);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.92em;
+    }
+
+    .bubble-content a {
+      color: #1d4ed8;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      word-break: break-all;
+    }
+
+    .bubble-content .table-wrap {
+      margin: 0 0 12px;
+      overflow-x: auto;
+      border-radius: 12px;
+    }
+
+    .bubble-content hr {
+      margin: 0 0 12px;
+      border: 0;
+      border-top: 1px solid rgba(37, 99, 235, 0.14);
+    }
+
+    .bubble-content table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid rgba(37, 99, 235, 0.12);
+      font-size: 0.96em;
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    .bubble-content th,
+    .bubble-content td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(37, 99, 235, 0.08);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .bubble-content th {
+      background: rgba(37, 99, 235, 0.06);
+      font-weight: 600;
+    }
+
+    .bubble-content tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .bubble-content img {
+      display: block;
+      max-width: 100%;
+      margin: 0 0 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(37, 99, 235, 0.1);
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
     }
 
     .loading-dots {
@@ -687,6 +829,127 @@
       });
     }
 
+    function escapeHtml(text) {
+      return text
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function renderInlineMarkdown(text) {
+      let html = escapeHtml(text);
+      html = html.replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g, '<img src="$2" alt="$1" loading="lazy">');
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+      html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+      html = html.replace(/(^|[\s(])(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer">$2</a>');
+      return html;
+    }
+
+    function renderTable(block) {
+      const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
+      if (lines.length < 2) {
+        return '';
+      }
+
+      const separatorPattern = /^\|?[\s:-]+(\|[\s:-]+)+\|?$/;
+      if (!separatorPattern.test(lines[1])) {
+        return '';
+      }
+
+      const parseRow = (line) => line
+        .replace(/^\|/, '')
+        .replace(/\|$/, '')
+        .split('|')
+        .map((cell) => cell.trim());
+
+      const headers = parseRow(lines[0]);
+      const rows = lines.slice(2).map(parseRow);
+
+      const headHtml = `<tr>${headers.map((cell) => `<th>${renderInlineMarkdown(cell)}</th>`).join('')}</tr>`;
+      const bodyHtml = rows.map((cells) => `<tr>${cells.map((cell) => `<td>${renderInlineMarkdown(cell)}</td>`).join('')}</tr>`).join('');
+      return `<div class="table-wrap"><table><thead>${headHtml}</thead><tbody>${bodyHtml}</tbody></table></div>`;
+    }
+
+    function renderAssistantMarkdown(text) {
+      const normalized = text.replace(/\r\n/g, '\n').trim();
+      if (!normalized) {
+        return '';
+      }
+
+      const codeBlocks = [];
+      const withPlaceholders = normalized.replace(/```([\w-]*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+        const placeholder = `__CODE_BLOCK_${codeBlocks.length}__`;
+        const languageClass = lang ? ` class="language-${escapeHtml(lang)}"` : '';
+        codeBlocks.push(`<pre><code${languageClass}>${escapeHtml(code.trim())}</code></pre>`);
+        return placeholder;
+      });
+
+      const blocks = withPlaceholders.split(/\n\s*\n/);
+      const htmlBlocks = blocks.map((block) => {
+        const trimmedBlock = block.trim();
+        if (!trimmedBlock) {
+          return '';
+        }
+
+        const codeMatch = trimmedBlock.match(/^__CODE_BLOCK_(\d+)__$/);
+        if (codeMatch) {
+          return codeBlocks[Number(codeMatch[1])] || '';
+        }
+
+        if (/^---+$/.test(trimmedBlock) || /^\*\*\*+$/.test(trimmedBlock)) {
+          return '<hr>';
+        }
+
+        const tableHtml = renderTable(trimmedBlock);
+        if (tableHtml) {
+          return tableHtml;
+        }
+
+        const lines = trimmedBlock.split('\n').map((line) => line.trim()).filter(Boolean);
+        if (!lines.length) {
+          return '';
+        }
+
+        if (lines.every((line) => /^>\s?/.test(line))) {
+          const content = lines.map((line) => line.replace(/^>\s?/, '')).map(renderInlineMarkdown).join('<br>');
+          return `<blockquote>${content}</blockquote>`;
+        }
+
+        const headingMatch = lines.length === 1 ? lines[0].match(/^(#{1,4})\s+(.+)$/) : null;
+        if (headingMatch) {
+          const level = Math.min(headingMatch[1].length, 4);
+          return `<h${level}>${renderInlineMarkdown(headingMatch[2])}</h${level}>`;
+        }
+
+        const unordered = lines.every((line) => /^[-*•]\s+/.test(line));
+        const ordered = lines.every((line) => /^\d+\.\s+/.test(line));
+
+        if (unordered) {
+          const items = lines
+            .map((line) => line.replace(/^[-*•]\s+/, ''))
+            .map((line) => `<li>${renderInlineMarkdown(line)}</li>`)
+            .join('');
+          return `<ul>${items}</ul>`;
+        }
+
+        if (ordered) {
+          const items = lines
+            .map((line) => line.replace(/^\d+\.\s+/, ''))
+            .map((line) => `<li>${renderInlineMarkdown(line)}</li>`)
+            .join('');
+          return `<ol>${items}</ol>`;
+        }
+
+        return `<p>${lines.map(renderInlineMarkdown).join('<br>')}</p>`;
+      });
+
+      return htmlBlocks.join('');
+    }
+
     function createMessage(role, text, options = {}) {
       const message = document.createElement('article');
       message.className = `message ${role}`;
@@ -712,7 +975,14 @@
         bubble.appendChild(textNode);
         bubble.appendChild(dots);
       } else {
-        bubble.textContent = text;
+        if (role === 'assistant') {
+          const content = document.createElement('div');
+          content.className = 'bubble-content';
+          content.innerHTML = renderAssistantMarkdown(text);
+          bubble.appendChild(content);
+        } else {
+          bubble.textContent = text;
+        }
       }
 
       body.appendChild(meta);
